@@ -30,8 +30,8 @@ public class ZXFootView extends RelativeLayout{
     public static final int STATUS_LOADMORE_LOADING=3;
     //没有更多数据了
     public static final int STATUS_LOAD_NO_DATA=4;
-
-    private int currentStatus=STATUS_LOADMORE_TO_UP;
+    //载入数据完成
+    public static final int STATUS_LOAD_DATA_END=5;
 
     public ZXFootView(Context context) {
         this(context,null);
@@ -66,6 +66,9 @@ public class ZXFootView extends RelativeLayout{
         }else if(status == STATUS_LOAD_NO_DATA){
             progressBar.setVisibility(GONE);
             hintTxt.setText("没有更多啦");
+        }else if(status == STATUS_LOAD_DATA_END){
+            progressBar.setVisibility(GONE);
+            hintTxt.setText("上拉加载更多");
         }
 
     }

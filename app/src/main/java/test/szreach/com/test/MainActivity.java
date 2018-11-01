@@ -54,17 +54,22 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setRefreshUpData(new ZXRecylerView.RefreshDataListener() {
             @Override
             public void RefreshUpData() {
-
+                Log.e("RefreshData","-->下拉刷新");
             }
 
             @Override
             public void RefreshLoadData() {
-                Log.e("RefreshLoadData","-->上拉加载更多");
+                Log.e("RefreshData","-->上拉加载更多");
             }
 
             @Override
             public void RefreshDataComplete() {
+                Log.e("RefreshData","-->上拉，下拉完成");
+            }
 
+            @Override
+            public void RefreshCancel() {
+                Log.e("RefreshData","-->上拉，下拉取消");
             }
         });
 

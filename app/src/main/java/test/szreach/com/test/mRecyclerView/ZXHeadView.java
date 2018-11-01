@@ -23,7 +23,14 @@ public class ZXHeadView extends RelativeLayout {
     private ProgressBar progressBar;
     private TextView hintTxt;
 
-
+    //下拉刷新
+    public static final int STATUS_REFRESH_PULL_RESHRESH=1;
+    //释放以刷新
+    public static final int STATUS_REFRESH_TO_REFRESH=2;
+    //正在刷新加载中
+    public static final int STATUS_REFRESH_REFRESHING=3;
+    //刷新完成
+    public static final int STATUS_REFRESH_DATA_END=4;
 
     public ZXHeadView(Context context) {
         this(context,null);
@@ -39,5 +46,24 @@ public class ZXHeadView extends RelativeLayout {
         progressBar=view.findViewById(R.id.head_progress_bar);
         hintTxt=view.findViewById(R.id.head_hint_txt);
         addView(view);
+        progressBar.setVisibility(GONE);
+        hintTxt.setText("下拉刷新");
+
+    }
+
+    public void setStatus_To_Refresh(int status){
+        if(status == STATUS_REFRESH_PULL_RESHRESH){
+            progressBar.setVisibility(GONE);
+            hintTxt.setText("下拉刷新");
+        }else if(status == STATUS_REFRESH_TO_REFRESH){
+            progressBar.setVisibility(GONE);
+            hintTxt.setText("释放以刷新");
+        }else if(status == STATUS_REFRESH_REFRESHING){
+            progressBar.setVisibility(VISIBLE);
+            hintTxt.setText("正在刷新中");
+        }else if(status == STATUS_REFRESH_DATA_END){
+            progressBar.setVisibility(VISIBLE);
+            hintTxt.setText("下拉刷新");
+        }
     }
 }

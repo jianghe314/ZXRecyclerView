@@ -18,11 +18,14 @@ import java.util.ArrayList;
 
 /**
  * Created by ZX on 2018/10/18
+ * 需求分析
+ *
  * 上拉加载更多：1.当处于加载更多时，此时下滑应可以取消加载更多状态，即取消请求队列，隐藏尾布局
  *               2.加载更多完成隐藏尾布局
  *               3.上拉未达到阈值时显示上拉加载更多，松开隐藏尾布局，当上拉距离达到阈值时，显示释放以加载更多，松开显示加载中
- * 下拉刷新：
- *
+ * 下拉刷新：1.当处于下拉刷新时，此时上滑可以取消数据的加载，隐藏头布局
+ *           2.下拉刷新完成时，隐藏头布局，刷新未完成时，保存正在刷新的状态
+ *           3.是否能够设置打开页面自动刷新功能
  */
 public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
 
@@ -78,6 +81,10 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
 
     private RefreshDataListener refreshDataListener;
 
+    //执行的任务
+    private RefreshUpData refreshUpData;
+    private RefreshLoadDate refreshLoadDate;
+
     public ZXRecylerView(Context context) {
         this(context,null);
     }
@@ -127,8 +134,6 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
         super.onLayout(changed, l, t, r, b);
         headerHeight=-header.getHeight();
         footerHeight=footer.getHeight();
-        Log.e("HeadHeight","-->"+headerHeight);
-        Log.e("FootHeight","-->"+footerHeight);
         headLayoutParams= (MarginLayoutParams) header.getLayoutParams();
         headLayoutParams.topMargin=headerHeight;
 
@@ -145,9 +150,7 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
     //监听列表滑动事件
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-        //获取第一个和最后一个可视控件的位置
-        int[] pos=getVisiblePos();
-        Log.e("POS","-->pos[0]："+pos[0]+"-->pos[1]:"+pos[1]);
+
         switch (event.getAction()){
             case MotionEvent.ACTION_DOWN:
                 //手指按下时,获取手指在屏幕的位置
@@ -156,13 +159,17 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
             case MotionEvent.ACTION_MOVE:
                 float yMove=event.getRawY();
                 int distance= (int) (yMove-yDown);
-                Log.e("Distance","--->"+Math.abs(distance));
-                //当小于阈值时隐藏头布局和尾布局
+                Log.e("Distance","-->"+distance);
                 if(Math.abs(distance) < touchSlop){
                     return false;
                 }else {
-                    //distance>0即下拉否则上拉
-                    if(distance>0){
+                    /**
+                     * distance>0即下拉否则上拉
+                     * 1.当正在处于上拉加载更多状态时，此时下滑应该可以取消加载更多的状态。
+                     * 2.当正在处于下拉刷新状态时，此时上滑应该可以取消刷新状态。
+                     * 3.当数据不足一页时，不能上拉加载更多。
+                     */
+                    if(distance > 0){
                         if(headCurrentStatus != STATUS_REFRESHING){
                             if(null == headLayoutParams){
                                 headLayoutParams= (MarginLayoutParams) header.getLayoutParams();
@@ -170,7 +177,28 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                             if(null != headLayoutParams){
                                 headLayoutParams.topMargin=(distance/2)+headerHeight;
                                 header.setLayoutParams(headLayoutParams);
+                                header.setStatus_To_Refresh(ZXHeadView.STATUS_REFRESH_PULL_RESHRESH);
+                                headCurrentStatus=STATUS_PULL_TO_REFRESH;
+                            }
+                            //当下拉达到阈值时，显示释放以刷新
+                            if(Math.abs(distance) >= SCROLL_VLUES){
+                                header.setStatus_To_Refresh(ZXHeadView.STATUS_REFRESH_TO_REFRESH);
                                 headCurrentStatus=STATUS_REFRESH_TO_REFRESH;
+                            }
+                        }
+                        //取消上拉加载更多
+                        if(footCurrentStatus == STATUS_LOADMORE_LOADING){
+                            if(null != footLayoutParams){
+                                footLayoutParams.bottomMargin=-footer.getHeight();
+                                footer.setLayoutParams(footLayoutParams);
+                                footer.setStatus_To_Load(ZXFootView.STATUS_LOAD_DATA_END);
+                                //取消任务
+                                if(!refreshLoadDate.isCancelled()){
+                                    if(refreshLoadDate.cancel(true)){
+                                        refreshDataListener.RefreshCancel();
+                                    }
+                                }
+                                footCurrentStatus=STATUS_REFRESH_END;
                             }
                         }
                     }else {
@@ -179,7 +207,7 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                                 footLayoutParams= (MarginLayoutParams) footer.getLayoutParams();
                             }
                             if(null != footLayoutParams){
-                                int lm=(-distance/2)-140;
+                                int lm=(-distance/2)-footer.getHeight();
                                 footLayoutParams.bottomMargin=lm;
                                 footer.setLayoutParams(footLayoutParams);
                                 footCurrentStatus=STATUS_LOADMORE_END;
@@ -189,27 +217,65 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                             footer.setStatus_To_Load(ZXFootView.STATUS_LOADMORE_TO_LOAD);
                             footCurrentStatus=STATUS_LOADMORE_TO_LOAD;
                         }
+                        //取消下拉刷新
+                        if(headCurrentStatus == STATUS_REFRESHING){
+                            if(null != headLayoutParams){
+                                headLayoutParams.topMargin=-header.getHeight();
+                                header.setLayoutParams(headLayoutParams);
+                                header.setStatus_To_Refresh(ZXHeadView.STATUS_REFRESH_DATA_END);
+                                //取消任务,true:已经取消任务，false,没有取消任务
+                                if(!refreshUpData.isCancelled()){
+                                    if(refreshUpData.cancel(true)){
+                                        refreshDataListener.RefreshCancel();
+                                    }
+                                }
+                                headCurrentStatus=STATUS_REFRESH_END;
+                            }
+                        }
                     }
                 }
                 break;
                 //抬起手指的时候
             case MotionEvent.ACTION_UP:
-                if(headCurrentStatus == STATUS_REFRESH_TO_REFRESH){
-                    //如果松开手指时是下拉状态就调用隐藏下拉头的方法
-                    headLayoutParams.topMargin=-140;
+                if(headCurrentStatus == STATUS_PULL_TO_REFRESH){
+                    //下拉刷新未到达阈值
+                    headLayoutParams.topMargin=-header.getHeight();
                     header.setLayoutParams(headLayoutParams);
                 }
                 if(footCurrentStatus == STATUS_LOADMORE_END){
                     //要加载更多 ,隐藏尾部，此时隐藏尾部会使adapter.getCountItem不对
                     if(null != footLayoutParams){
                         footLayoutParams= (MarginLayoutParams) footer.getLayoutParams();
-                        footLayoutParams.bottomMargin=-140;
+                        footLayoutParams.bottomMargin=-footer.getHeight();
                         footer.setLayoutParams(footLayoutParams);
                         footer.setStatus_To_Load(ZXFootView.STATUS_LOADMORE_TO_UP);
                         footCurrentStatus=STATUS_LOADMORE_END;
                     }
 
                 }
+                //下拉刷新到达阈值，显示释放以刷新
+                if(headCurrentStatus == STATUS_REFRESH_TO_REFRESH){
+                    //如果松开手指时是下拉状态
+                    headLayoutParams.topMargin=0;
+                    header.setLayoutParams(headLayoutParams);
+                    header.setStatus_To_Refresh(ZXHeadView.STATUS_REFRESH_REFRESHING);
+                    headCurrentStatus=STATUS_REFRESHING;
+                    if(null == refreshUpData){
+                        refreshUpData=new RefreshUpData();
+                    }
+                    AsyncTask.Status status=refreshUpData.getStatus();
+                    //如果任务栈已经开始执行或者还没有执行，则执行
+                    if(status== AsyncTask.Status.PENDING){
+                        refreshUpData.execute();
+                    }
+                    if(status == AsyncTask.Status.FINISHED){
+                        refreshUpData=null;
+                        refreshUpData=new RefreshUpData();
+                        refreshUpData.execute();
+                    }
+
+                }
+
                 if(footCurrentStatus == STATUS_LOADMORE_TO_LOAD){
                     //当处于STATUS_LOADMORE_TO_LOAD停留bottomMargin的值，加载完成回调加载完成状态
                     if(null != footLayoutParams){
@@ -218,16 +284,23 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                         footLayoutParams.bottomMargin=0;
                         footer.setLayoutParams(footLayoutParams);
                         footCurrentStatus=STATUS_LOADMORE_LOADING;
-                        new RefreshLoadDate().execute();
+                        if(null == refreshLoadDate){
+                            refreshLoadDate=new RefreshLoadDate();
+                        }
+                        AsyncTask.Status status=refreshLoadDate.getStatus();
+                        //如果任务栈已经开始执行或者还没有执行，则执行
+                        if(status== AsyncTask.Status.PENDING){
+                            refreshLoadDate.execute();
+                        }
+                        if(status == AsyncTask.Status.FINISHED){
+                            //因为AsyncTask方法一个任务只能执行一次，如果任务已经执行
+                            refreshLoadDate=null;
+                            refreshLoadDate=new RefreshLoadDate();
+                            refreshLoadDate.execute();
+                        }
                     }
                 }
                 break;
-                default:
-                    Log.e("RefreshLoadData","-->execute");
-                    if(footCurrentStatus == STATUS_LOADMORE_LOADING){
-
-                    }
-                    break;
         }
 
         return false;
@@ -258,14 +331,13 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
 
         @Override
         protected Void doInBackground(Void... voids) {
-            try {
-                Log.e("RefreshLoadData","-->doInBackground");
-                Thread.sleep(1000*5);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
             if(null != refreshDataListener){
                 refreshDataListener.RefreshLoadData();
+            }
+            try {
+                Thread.sleep(10000*5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
             return null;
         }
@@ -274,15 +346,15 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
-            Log.e("RefreshLoadData","-->onPostExecute");
             if(null == footLayoutParams){
                 footLayoutParams= (MarginLayoutParams) footer.getLayoutParams();
             }else {
-                footLayoutParams.bottomMargin=-140;
+                footLayoutParams.bottomMargin=-footer.getHeight();
                 footer.setLayoutParams(footLayoutParams);
-            }
-            if(null != refreshDataListener){
+                footer.setStatus_To_Load(ZXFootView.STATUS_LOAD_DATA_END);
                 refreshDataListener.RefreshDataComplete();
+                footCurrentStatus=STATUS_LOADMORE_END;
+
             }
         }
     }
@@ -291,6 +363,15 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
 
         @Override
         protected Void doInBackground(Void... voids) {
+            if(null != refreshDataListener){
+                refreshDataListener.RefreshUpData();
+            }
+            try {
+                Thread.sleep(10000*5);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
             return null;
         }
 
@@ -298,6 +379,15 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
+            if(null == headLayoutParams){
+                headLayoutParams= (MarginLayoutParams) header.getLayoutParams();
+            }else {
+                headLayoutParams.topMargin=-header.getHeight();
+                header.setLayoutParams(headLayoutParams);
+                header.setStatus_To_Refresh(ZXHeadView.STATUS_REFRESH_DATA_END);
+                refreshDataListener.RefreshDataComplete();
+                headCurrentStatus=STATUS_REFRESH_END;
+            }
         }
     }
 
@@ -391,6 +481,9 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
 
         //上拉加载，下拉刷新完成是结束刷新状态
         void RefreshDataComplete();
+
+        //取消加载更多和上拉刷新状态
+        void RefreshCancel();
     }
 
 }
