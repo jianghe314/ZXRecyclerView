@@ -42,8 +42,10 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
     private static final int STATUS_LOADMORE_LOADING=5;
     //加载更多完成或未加载状态
     private static final int STATUS_LOADMORE_END=6;
-    //是否加载更多
-    private static final int  STATUS_LOADMORE_TO_LOAD=7;
+    //上拉加载更多
+    private static final int STATUS_LOADMORE_UP_LOAD=7;
+    //释放以加载更多
+    private static final int  STATUS_LOADMORE_TO_LOAD=8;
 
 
     //下拉头部回滚的速度
@@ -150,7 +152,8 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
     //监听列表滑动事件
     @Override
     public boolean onTouch(View v, MotionEvent event) {
-
+        int[] pos=getVisiblePos();
+        Log.e("pos","pos[0]-->"+pos[0]+"pos[1]-->"+pos[1]+"-->getItemCount-->"+zxAdapter.getItemCount());
         switch (event.getAction()){
             case MotionEvent.ACTION_DOWN:
                 //手指按下时,获取手指在屏幕的位置
@@ -170,20 +173,22 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                      * 3.当数据不足一页时，不能上拉加载更多。
                      */
                     if(distance > 0){
-                        if(headCurrentStatus != STATUS_REFRESHING){
-                            if(null == headLayoutParams){
-                                headLayoutParams= (MarginLayoutParams) header.getLayoutParams();
-                            }
-                            if(null != headLayoutParams){
-                                headLayoutParams.topMargin=(distance/2)+headerHeight;
-                                header.setLayoutParams(headLayoutParams);
-                                header.setStatus_To_Refresh(ZXHeadView.STATUS_REFRESH_PULL_RESHRESH);
-                                headCurrentStatus=STATUS_PULL_TO_REFRESH;
-                            }
-                            //当下拉达到阈值时，显示释放以刷新
-                            if(Math.abs(distance) >= SCROLL_VLUES){
-                                header.setStatus_To_Refresh(ZXHeadView.STATUS_REFRESH_TO_REFRESH);
-                                headCurrentStatus=STATUS_REFRESH_TO_REFRESH;
+                        if(pos[0] <= 1){
+                            if(headCurrentStatus != STATUS_REFRESHING){
+                                if(null == headLayoutParams){
+                                    headLayoutParams= (MarginLayoutParams) header.getLayoutParams();
+                                }
+                                if(null != headLayoutParams){
+                                    headLayoutParams.topMargin=(distance/2)+headerHeight;
+                                    header.setLayoutParams(headLayoutParams);
+                                    header.setStatus_To_Refresh(ZXHeadView.STATUS_REFRESH_PULL_RESHRESH);
+                                    headCurrentStatus=STATUS_PULL_TO_REFRESH;
+                                }
+                                //当下拉达到阈值时，显示释放以刷新
+                                if(Math.abs(distance) >= SCROLL_VLUES){
+                                    header.setStatus_To_Refresh(ZXHeadView.STATUS_REFRESH_TO_REFRESH);
+                                    headCurrentStatus=STATUS_REFRESH_TO_REFRESH;
+                                }
                             }
                         }
                         //取消上拉加载更多
@@ -202,20 +207,23 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                             }
                         }
                     }else {
-                        if(footCurrentStatus != STATUS_LOADMORE_LOADING){
-                            if(null == footLayoutParams){
-                                footLayoutParams= (MarginLayoutParams) footer.getLayoutParams();
+                        if(pos[1] >= zxAdapter.getItemCount()-2){
+                            if(footCurrentStatus != STATUS_LOADMORE_LOADING){
+                                if(null == footLayoutParams){
+                                    footLayoutParams= (MarginLayoutParams) footer.getLayoutParams();
+                                }
+                                if(null != footLayoutParams){
+                                    int lm=(-distance/2)-footer.getHeight();
+                                    footLayoutParams.bottomMargin=lm;
+                                    footer.setLayoutParams(footLayoutParams);
+                                    footCurrentStatus=STATUS_LOADMORE_UP_LOAD;
+                                }
+                                if(Math.abs(distance) >= SCROLL_VLUES){
+                                    footer.setStatus_To_Load(ZXFootView.STATUS_LOADMORE_TO_LOAD);
+                                    footCurrentStatus=STATUS_LOADMORE_TO_LOAD;
+                                }
                             }
-                            if(null != footLayoutParams){
-                                int lm=(-distance/2)-footer.getHeight();
-                                footLayoutParams.bottomMargin=lm;
-                                footer.setLayoutParams(footLayoutParams);
-                                footCurrentStatus=STATUS_LOADMORE_END;
-                            }
-                        }
-                        if(Math.abs(distance) >= SCROLL_VLUES){
-                            footer.setStatus_To_Load(ZXFootView.STATUS_LOADMORE_TO_LOAD);
-                            footCurrentStatus=STATUS_LOADMORE_TO_LOAD;
+
                         }
                         //取消下拉刷新
                         if(headCurrentStatus == STATUS_REFRESHING){
@@ -242,8 +250,8 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                     headLayoutParams.topMargin=-header.getHeight();
                     header.setLayoutParams(headLayoutParams);
                 }
-                if(footCurrentStatus == STATUS_LOADMORE_END){
-                    //要加载更多 ,隐藏尾部，此时隐藏尾部会使adapter.getCountItem不对
+                if(footCurrentStatus == STATUS_LOADMORE_UP_LOAD){
+                    //要加载更多 ,隐藏尾部
                     if(null != footLayoutParams){
                         footLayoutParams= (MarginLayoutParams) footer.getLayoutParams();
                         footLayoutParams.bottomMargin=-footer.getHeight();
@@ -334,11 +342,6 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
             if(null != refreshDataListener){
                 refreshDataListener.RefreshLoadData();
             }
-            try {
-                Thread.sleep(10000*5);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
             return null;
         }
 
@@ -366,12 +369,6 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
             if(null != refreshDataListener){
                 refreshDataListener.RefreshUpData();
             }
-            try {
-                Thread.sleep(10000*5);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-
             return null;
         }
 
@@ -390,6 +387,7 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
             }
         }
     }
+
 
     class ZXAdapter extends Adapter{
 

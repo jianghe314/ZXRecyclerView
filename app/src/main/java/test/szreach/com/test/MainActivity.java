@@ -54,11 +54,26 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setRefreshUpData(new ZXRecylerView.RefreshDataListener() {
             @Override
             public void RefreshUpData() {
+                try {
+                    Thread.sleep(1000*5);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 Log.e("RefreshData","-->下拉刷新");
             }
 
             @Override
             public void RefreshLoadData() {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(1000*5);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }).start();
                 Log.e("RefreshData","-->上拉加载更多");
             }
 
