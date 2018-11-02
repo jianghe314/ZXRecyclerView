@@ -4,8 +4,10 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -162,7 +164,6 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
             case MotionEvent.ACTION_MOVE:
                 float yMove=event.getRawY();
                 int distance= (int) (yMove-yDown);
-                Log.e("Distance","-->"+distance);
                 if(Math.abs(distance) < touchSlop){
                     return false;
                 }else {
@@ -320,10 +321,48 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
     private int[] getVisiblePos(){
         int[] pos=new int[2];
         LayoutManager layoutManager=getLayoutManager();
-        LinearLayoutManager linearLayoutManager= (LinearLayoutManager) layoutManager;
-        pos[0]=linearLayoutManager.findFirstVisibleItemPosition();
-        pos[1]=linearLayoutManager.findLastVisibleItemPosition();
+        if(layoutManager instanceof StaggeredGridLayoutManager){
+            StaggeredGridLayoutManager staggeredGridLayoutManager= (StaggeredGridLayoutManager) layoutManager;
+            int spanCount=staggeredGridLayoutManager.getSpanCount();
+            int[] firsts=new int[spanCount];
+            int[] lasts=new int[spanCount];
+            staggeredGridLayoutManager.findFirstVisibleItemPositions(firsts);
+            staggeredGridLayoutManager.findLastVisibleItemPositions(lasts);
+            pos[0]=getMin(firsts);
+            pos[1]=getMax(lasts);
+        }else if(layoutManager instanceof GridLayoutManager){
+            GridLayoutManager gridLayoutManager= (GridLayoutManager) layoutManager;
+            pos[0]=gridLayoutManager.findFirstVisibleItemPosition();
+            pos[1]=gridLayoutManager.findLastVisibleItemPosition();
+        }else {
+            LinearLayoutManager linearLayoutManager= (LinearLayoutManager) layoutManager;
+            pos[0]=linearLayoutManager.findFirstVisibleItemPosition();
+            pos[1]=linearLayoutManager.findLastVisibleItemPosition();
+        }
+
         return pos;
+    }
+
+    //获取数组最小值
+    private int getMin(int[] datas){
+        int min=datas[0];
+        for (int value : datas) {
+            if(value < min){
+                min=value;
+            }
+        }
+        return min;
+    }
+
+    //获取数组最大值
+    private int getMax(int[] datas){
+        int max=datas[0];
+        for (int value : datas) {
+            if(value > max){
+                max=value;
+            }
+        }
+        return max;
     }
 
     public void setRefreshUpData(RefreshDataListener refreshDataListener){
@@ -388,6 +427,16 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
         }
     }
 
+    //避免在任务正在请求时退出是产生的内存泄露
+    public void CancelRequestTask(){
+        if(null != refreshUpData){
+            refreshUpData.cancel(true);
+        }
+        if(null != refreshLoadDate){
+            refreshLoadDate.cancel(true);
+        }
+    }
+
 
     class ZXAdapter extends Adapter{
 
@@ -441,7 +490,34 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
             return mAdapter.getItemCount()+mHeaderView.size()+mFooterView.size();
         }
 
+        @Override
+        public void onAttachedToRecyclerView(@NonNull RecyclerView recyclerView) {
+            LayoutManager layoutManager = recyclerView.getLayoutManager();
+            if(layoutManager instanceof GridLayoutManager){
+                final GridLayoutManager gridLayoutManager= (GridLayoutManager) layoutManager;
+                gridLayoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+                    @Override
+                    public int getSpanSize(int position) {
+                        /**
+                         *  如果是头或尾位置，则返回gridLayoutManager.getSpanCount()跨度数，
+                         *  这里设置的是2，所以占一整行，否则默认返回1
+                         */
+                        return (isRefresh(position) || isLoadMore(position))?gridLayoutManager.getSpanCount():1;
+                    }
+                });
+            }
+        }
 
+        @Override
+        public void onViewAttachedToWindow(@NonNull ViewHolder holder) {
+             ViewGroup.LayoutParams lp = holder.itemView.getLayoutParams();
+             if(null != lp && lp instanceof StaggeredGridLayoutManager.LayoutParams){
+                 if(isRefresh(holder.getLayoutPosition()) || isLoadMore(holder.getLayoutPosition())){
+                     StaggeredGridLayoutManager.LayoutParams slp= (StaggeredGridLayoutManager.LayoutParams) lp;
+                     slp.setFullSpan(true);
+                 }
+             }
+        }
 
         //是否刷新
         private boolean isRefresh(int position){

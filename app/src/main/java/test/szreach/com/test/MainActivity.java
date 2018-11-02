@@ -7,6 +7,7 @@ import android.support.v7.widget.DividerItemDecoration;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,6 +22,8 @@ import test.szreach.com.test.mRecyclerView.RefreshRecyclerView;
 import test.szreach.com.test.mRecyclerView.ZXFootView;
 import test.szreach.com.test.mRecyclerView.ZXHeadView;
 import test.szreach.com.test.mRecyclerView.ZXRecylerView;
+
+import static android.support.v7.widget.StaggeredGridLayoutManager.VERTICAL;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         recyclerView=findViewById(R.id.recycler_view);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.setLayoutManager(new StaggeredGridLayoutManager(2,RecyclerView.VERTICAL));
         adapter=new ItemAdapter(data);
         recyclerView.setAdapter(adapter);
         recyclerView.addFootView(new ZXFootView(this));
@@ -45,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
         //recyclerView.addItemDecoration(new DividerItemDecoration(this,DividerItemDecoration.VERTICAL));
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         //创建数据
-        for (int i = 'A'; i <='Z'; i++) {
+        for (int i = 'A'; i <='z'; i++) {
             Bean bean=new Bean();
             bean.setTv((char)i+"");
             data.add(bean);
@@ -54,27 +57,22 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setRefreshUpData(new ZXRecylerView.RefreshDataListener() {
             @Override
             public void RefreshUpData() {
+                Log.e("RefreshData","-->下拉刷新");
                 try {
                     Thread.sleep(1000*5);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                Log.e("RefreshData","-->下拉刷新");
             }
 
             @Override
             public void RefreshLoadData() {
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Thread.sleep(1000*5);
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }).start();
                 Log.e("RefreshData","-->上拉加载更多");
+                try {
+                    Thread.sleep(1000*5);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
             }
 
             @Override
@@ -89,6 +87,13 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
+
     }
 
+
+    @Override
+    protected void onStop() {
+        recyclerView.CancelRequestTask();
+        super.onStop();
+    }
 }
