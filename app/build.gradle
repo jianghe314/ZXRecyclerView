@@ -17,6 +17,13 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    /*
+    //添加依赖aar资源包
+    repositories{
+        flatDir {
+            dirs 'libs'
+        }
+    }*/
 }
 
 dependencies {

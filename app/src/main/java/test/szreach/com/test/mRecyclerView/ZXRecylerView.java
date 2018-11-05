@@ -18,7 +18,7 @@ import android.widget.LinearLayout;
 
 import java.util.ArrayList;
 
-/**
+/**todo:还需要实现的功能，1.是否开启自动刷新功能，2.分页不足一页不显示上拉加载数据，3.是否开启刷新和上拉加载更多数据功能
  * Created by ZX on 2018/10/18
  * 需求分析
  *

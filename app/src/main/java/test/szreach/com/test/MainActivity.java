@@ -3,14 +3,8 @@ package test.szreach.com.test;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.DefaultItemAnimator;
-import android.support.v7.widget.DividerItemDecoration;
-import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.util.Log;
-import android.view.LayoutInflater;
-import android.view.View;
 
 
 import com.google.gson.Gson;
@@ -18,12 +12,9 @@ import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
 
-import test.szreach.com.test.mRecyclerView.RefreshRecyclerView;
 import test.szreach.com.test.mRecyclerView.ZXFootView;
 import test.szreach.com.test.mRecyclerView.ZXHeadView;
 import test.szreach.com.test.mRecyclerView.ZXRecylerView;
-
-import static android.support.v7.widget.StaggeredGridLayoutManager.VERTICAL;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -40,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         recyclerView=findViewById(R.id.recycler_view);
-        recyclerView.setLayoutManager(new StaggeredGridLayoutManager(2,RecyclerView.VERTICAL));
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
         adapter=new ItemAdapter(data);
         recyclerView.setAdapter(adapter);
         recyclerView.addFootView(new ZXFootView(this));
