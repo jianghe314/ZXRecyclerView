@@ -14,11 +14,11 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
+import android.view.ViewTreeObserver;
 
 import java.util.ArrayList;
 
-/**todo:还需要实现的功能，1.是否开启自动刷新功能，2.分页不足一页不显示上拉加载数据，3.是否开启刷新和上拉加载更多数据功能
+/**todo:还需要实现的功能，1.分页不足一页不显示上拉加载数据，2.是否开启刷新和上拉加载更多数据功能
  * Created by ZX on 2018/10/18
  * 需求分析
  *
@@ -54,7 +54,13 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
     private static final int SCROLL_SPEED=-20;
 
     //下拉刷新，上拉加载的滑动停留状态阈值
-    private static final int SCROLL_VLUES=350;
+    private static final int SCROLL_VALUE =350;
+
+    //是否开启自动刷新功能
+    private boolean isAutoRefresh=true;
+
+    //监听控件addOnGlobalLayoutListener里面的方法运行
+    private boolean isFirst=true;
 
     //用户设置的Adapter
     private Adapter mAdapter;
@@ -103,6 +109,19 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
         //获取最小滑动距离的阈值
         touchSlop= ViewConfiguration.get(context).getScaledTouchSlop();
         setOnTouchListener(this);
+        //添加控件绘制完毕监听，开启自动刷新功能,此方法会多次运行
+        getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                if(isAutoRefresh && isFirst){
+                    headCurrentStatus=STATUS_REFRESH_TO_REFRESH;
+                    onRefresh();
+                }
+                if(isFirst){
+                    isFirst=false;
+                }
+            }
+        });
     }
 
     private void init() {
@@ -132,6 +151,10 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
         footer= (ZXFootView) view;
     }
 
+    public void setAutoRefresh(boolean isAutoRefresh){
+        this.isAutoRefresh=isAutoRefresh;
+    }
+
     //初始化相关参数，将下拉头向上偏移进行隐藏
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
@@ -145,11 +168,7 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
 
     }
 
-    //处理尾部
-    @Override
-    public void onScrollStateChanged(int state) {
 
-    }
 
     //监听列表滑动事件
     @Override
@@ -174,6 +193,7 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                      * 3.当数据不足一页时，不能上拉加载更多。
                      */
                     if(distance > 0){
+                        //当滑到第1个Item的时候而不是第0个Item才开始时候容许再往上滑
                         if(pos[0] <= 1){
                             if(headCurrentStatus != STATUS_REFRESHING){
                                 if(null == headLayoutParams){
@@ -186,7 +206,7 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                                     headCurrentStatus=STATUS_PULL_TO_REFRESH;
                                 }
                                 //当下拉达到阈值时，显示释放以刷新
-                                if(Math.abs(distance) >= SCROLL_VLUES){
+                                if(Math.abs(distance) >= SCROLL_VALUE){
                                     header.setStatus_To_Refresh(ZXHeadView.STATUS_REFRESH_TO_REFRESH);
                                     headCurrentStatus=STATUS_REFRESH_TO_REFRESH;
                                 }
@@ -219,7 +239,7 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                                     footer.setLayoutParams(footLayoutParams);
                                     footCurrentStatus=STATUS_LOADMORE_UP_LOAD;
                                 }
-                                if(Math.abs(distance) >= SCROLL_VLUES){
+                                if(Math.abs(distance) >= SCROLL_VALUE){
                                     footer.setStatus_To_Load(ZXFootView.STATUS_LOADMORE_TO_LOAD);
                                     footCurrentStatus=STATUS_LOADMORE_TO_LOAD;
                                 }
@@ -263,27 +283,7 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
 
                 }
                 //下拉刷新到达阈值，显示释放以刷新
-                if(headCurrentStatus == STATUS_REFRESH_TO_REFRESH){
-                    //如果松开手指时是下拉状态
-                    headLayoutParams.topMargin=0;
-                    header.setLayoutParams(headLayoutParams);
-                    header.setStatus_To_Refresh(ZXHeadView.STATUS_REFRESH_REFRESHING);
-                    headCurrentStatus=STATUS_REFRESHING;
-                    if(null == refreshUpData){
-                        refreshUpData=new RefreshUpData();
-                    }
-                    AsyncTask.Status status=refreshUpData.getStatus();
-                    //如果任务栈已经开始执行或者还没有执行，则执行
-                    if(status== AsyncTask.Status.PENDING){
-                        refreshUpData.execute();
-                    }
-                    if(status == AsyncTask.Status.FINISHED){
-                        refreshUpData=null;
-                        refreshUpData=new RefreshUpData();
-                        refreshUpData.execute();
-                    }
-
-                }
+                onRefresh();
 
                 if(footCurrentStatus == STATUS_LOADMORE_TO_LOAD){
                     //当处于STATUS_LOADMORE_TO_LOAD停留bottomMargin的值，加载完成回调加载完成状态
@@ -315,6 +315,28 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
         return false;
     }
 
+    private void onRefresh() {
+        if(headCurrentStatus == STATUS_REFRESH_TO_REFRESH) {
+            //如果松开手指时是下拉状态
+            headLayoutParams.topMargin = 0;
+            header.setLayoutParams(headLayoutParams);
+            header.setStatus_To_Refresh(ZXHeadView.STATUS_REFRESH_REFRESHING);
+            headCurrentStatus = STATUS_REFRESHING;
+            if (null == refreshUpData) {
+                refreshUpData = new RefreshUpData();
+            }
+            AsyncTask.Status status = refreshUpData.getStatus();
+            //如果任务栈已经开始执行或者还没有执行，则执行
+            if (status == AsyncTask.Status.PENDING) {
+                refreshUpData.execute();
+            }
+            if (status == AsyncTask.Status.FINISHED) {
+                refreshUpData = null;
+                refreshUpData = new RefreshUpData();
+                refreshUpData.execute();
+            }
+        }
+    }
 
 
     //这里的pos[0]和pos[1]是显示在屏幕(可视视图)的第一个item和最后一个item的位置，不是列表的
