@@ -6,6 +6,7 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.OrientationHelper;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.StaggeredGridLayoutManager;
 import android.util.AttributeSet;
@@ -56,8 +57,11 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
     //下拉刷新，上拉加载的滑动停留状态阈值
     private static final int SCROLL_VALUE =350;
 
-    //是否开启自动刷新功能
+    //是否开启自动刷新功能,默认自动开启
     private boolean isAutoRefresh=true;
+
+    //是否开启上拉加载更多，默认不加载更多
+    private boolean isLoadMore=false;
 
     //监听控件addOnGlobalLayoutListener里面的方法运行
     private boolean isFirst=true;
@@ -116,6 +120,7 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                 if(isAutoRefresh && isFirst){
                     headCurrentStatus=STATUS_REFRESH_TO_REFRESH;
                     onRefresh();
+
                 }
                 if(isFirst){
                     isFirst=false;
@@ -151,8 +156,14 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
         footer= (ZXFootView) view;
     }
 
+    //是否开启自动刷新
     public void setAutoRefresh(boolean isAutoRefresh){
         this.isAutoRefresh=isAutoRefresh;
+    }
+
+    //是否开启上拉加载更多
+    public void setLoadMore(boolean isLoadMore){
+        this.isLoadMore=isLoadMore;
     }
 
     //初始化相关参数，将下拉头向上偏移进行隐藏
@@ -261,6 +272,7 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                                 headCurrentStatus=STATUS_REFRESH_END;
                             }
                         }
+
                     }
                 }
                 break;
@@ -271,6 +283,7 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
                     headLayoutParams.topMargin=-header.getHeight();
                     header.setLayoutParams(headLayoutParams);
                 }
+                //隐藏尾部
                 if(footCurrentStatus == STATUS_LOADMORE_UP_LOAD){
                     //要加载更多 ,隐藏尾部
                     if(null != footLayoutParams){
@@ -315,6 +328,7 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
         return false;
     }
 
+
     private void onRefresh() {
         if(headCurrentStatus == STATUS_REFRESH_TO_REFRESH) {
             //如果松开手指时是下拉状态
@@ -337,7 +351,6 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
             }
         }
     }
-
 
     //这里的pos[0]和pos[1]是显示在屏幕(可视视图)的第一个item和最后一个item的位置，不是列表的
     private int[] getVisiblePos(){

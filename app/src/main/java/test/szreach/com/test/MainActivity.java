@@ -36,10 +36,11 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
         recyclerView.addFootView(new ZXFootView(this));
         recyclerView.addHeadView(new ZXHeadView(this));
+        recyclerView.setLoadMore(false);
         //recyclerView.addItemDecoration(new DividerItemDecoration(this,DividerItemDecoration.VERTICAL));
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         //创建数据
-        for (int i = 'A'; i <='z'; i++) {
+        for (int i = 'A'; i <='Z'; i++) {
             Bean bean=new Bean();
             bean.setTv((char)i+"");
             data.add(bean);
