@@ -12,6 +12,8 @@ import java.util.List;
 public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.itemHolder> {
 
     private List<Bean> data;
+    private onItemClick onItemClick;
+
     public ItemAdapter(List<Bean> data) {
         this.data=data;
     }
@@ -23,9 +25,17 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.itemHolder> {
     }
 
     @Override
-    public void onBindViewHolder(@NonNull itemHolder holder, int position) {
+    public void onBindViewHolder(@NonNull itemHolder holder, final int position) {
         Bean bean=data.get(position);
         holder.bindData(bean);
+        holder.itemView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(onItemClick!=null){
+                    onItemClick.onItemClick(position);
+                }
+            }
+        });
     }
 
     @Override
@@ -44,9 +54,17 @@ public class ItemAdapter extends RecyclerView.Adapter<ItemAdapter.itemHolder> {
 
         private void bindData(Bean bean){
             tv.setText(bean.getTv());
-
         }
 
 
+    }
+
+
+    public interface onItemClick{
+        void onItemClick(int position);
+    }
+
+    public void setOnItemClick(onItemClick onItemClick){
+        this.onItemClick=onItemClick;
     }
 }

@@ -1,10 +1,17 @@
 package test.szreach.com.test;
 
+import android.support.annotation.IdRes;
+import android.support.annotation.StringRes;
+import android.support.design.widget.BottomSheetDialog;
+import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.Toast;
 
 
 import com.google.gson.Gson;
@@ -40,12 +47,23 @@ public class MainActivity extends AppCompatActivity {
         //recyclerView.addItemDecoration(new DividerItemDecoration(this,DividerItemDecoration.VERTICAL));
         recyclerView.setItemAnimator(new DefaultItemAnimator());
         //创建数据
-        for (int i = 'A'; i <='Z'; i++) {
+        for (int i = 'A'; i <='G'; i++) {
+
             Bean bean=new Bean();
             bean.setTv((char)i+"");
             data.add(bean);
         }
+
         adapter.notifyDataSetChanged();
+        adapter.setOnItemClick(new ItemAdapter.onItemClick() {
+            @Override
+            public void onItemClick(int position) {
+                BottomSheetDialog bottomSheetDialog=new BottomSheetDialog(MainActivity.this);
+                View view=View.inflate(MainActivity.this,R.layout.bottomdialog,null);
+                bottomSheetDialog.setContentView(view);
+                bottomSheetDialog.show();
+            }
+        });
         recyclerView.setRefreshUpData(new ZXRecylerView.RefreshDataListener() {
             @Override
             public void RefreshUpData() {
@@ -80,6 +98,16 @@ public class MainActivity extends AppCompatActivity {
 
 
 
+
+    }
+
+
+    private class MyThread extends Thread{
+
+        @Override
+        public void run() {
+            yield();
+        }
     }
 
 

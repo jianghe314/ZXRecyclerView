@@ -179,12 +179,11 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
 
     }
 
-
-
     //监听列表滑动事件
     @Override
     public boolean onTouch(View v, MotionEvent event) {
         int[] pos=getVisiblePos();
+        getOffset();
         Log.e("pos","pos[0]-->"+pos[0]+"pos[1]-->"+pos[1]+"-->getItemCount-->"+zxAdapter.getItemCount());
         switch (event.getAction()){
             case MotionEvent.ACTION_DOWN:
@@ -326,6 +325,14 @@ public class ZXRecylerView extends RecyclerView implements View.OnTouchListener{
         }
 
         return false;
+    }
+
+
+    private void getOffset(){
+        int rang=computeVerticalScrollRange();  //获取总高度
+        int offset=computeVerticalScrollOffset();//已经滑过高度
+        int extent=computeVerticalScrollExtent();
+        Log.e("getOffset","-->rang:"+rang+"--offset:"+offset+"--extent:"+extent);
     }
 
 
